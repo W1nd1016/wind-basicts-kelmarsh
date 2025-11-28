@@ -1,0 +1,15 @@
+# 原始大数据（不要上传）
+raw_scada/
+
+# 训练输出
+output/
+
+# data/wind/X.npy
+# data/wind/Y.npy
+# data/wind/mask.npy
+# data/wind/adj.npy
+# data/wind/meta.json
+
+# Python 常见缓存
+__pycache__/
+*.pyc
