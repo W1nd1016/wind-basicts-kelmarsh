@@ -1,4 +1,4 @@
-<img width="2222" height="590" alt="image" src="https://github.com/user-attachments/assets/7b11dde0-d50f-4d43-911a-5719f7989a40" /># WIND_BASICTS Kelmarsh wind forecasting
+# WIND_BASICTS Kelmarsh wind forecasting
 
 This repository builds an hourly spatiotemporal dataset for the Kelmarsh wind farm with 6 turbines, then trains and evaluates multiple forecasting baselines such as AGCRN, MTGNN, DGCRN, D2STGNN, LSTM, and STID.
 
