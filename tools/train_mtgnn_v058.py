@@ -9,7 +9,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from datasets.wind_dataset import WindSTFDataset
+from datasets.wind_dataset_scada_cerra_yearsplit import WindSTFDatasetScadaCerraYearSplit
 from models.mtgnn_v058 import MTGNN_v058
 
 
@@ -48,7 +48,7 @@ def main():
     print("Using device:", device)
 
     # ===== 读取 meta.json，拿到特征维度 & 节点数 =====
-    meta_path = "data/wind/meta.json"
+    meta_path = "data/wind_scada_cerra_4y_resample/meta.json"
     with open(meta_path, "r") as f:
         meta = json.load(f)
 
@@ -79,9 +79,9 @@ def main():
         adj = np.eye(num_nodes, dtype=np.float32)
 
     # ===== 数据集 & DataLoader =====
-    train_ds = WindSTFDataset(split="train", L=L, H=H)
-    val_ds   = WindSTFDataset(split="val",   L=L, H=H)
-    test_ds  = WindSTFDataset(split="test",  L=L, H=H)
+    train_ds = WindSTFDatasetScadaCerraYearSplit(split="train", L=L, H=H)
+    val_ds   = WindSTFDatasetScadaCerraYearSplit(split="val",   L=L, H=H)
+    test_ds  = WindSTFDatasetScadaCerraYearSplit(split="test",  L=L, H=H)
 
     train_ld = DataLoader(train_ds, batch_size=32, shuffle=True,  drop_last=True)
     val_ld   = DataLoader(val_ds,   batch_size=32, shuffle=False)

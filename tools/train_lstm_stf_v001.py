@@ -10,7 +10,7 @@ import torch
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
-from datasets.wind_dataset import WindSTFDataset
+from datasets.wind_dataset_onlyscada_no_5b import WindSTFDatasetOnlyScada5B
 from models.lstm_stf_v001 import LSTM_STF_v001
 
 
@@ -27,26 +27,40 @@ def masked_smooth_l1(pred, y, m, beta=1.0):
 def masked_mae(pred, y, m):
     return (m * (pred - y).abs()).sum() / (m.sum() + 1e-6)
 
+def masked_rmse(pred, y, m):
+    return torch.sqrt((m * (pred - y) ** 2).sum() / (m.sum() + 1e-6))
 
 @torch.no_grad()
-def eval_one(model, loader, device):
+def eval_one_with_3h6h(model, loader, device, forward_fn=None):
+    """
+    返回：MAE<3, RMSE<3, MAE<6, RMSE<6
+    forward_fn: 可选，用于像 FNP+AGCRN 那种 forward 需要额外输入时自定义 forward
+    """
     model.eval()
-    maes, rmses = [], []
-    for x, y, m in loader:
-        x = x.to(device)  # [B, L, N, F_full]
-        y = y.to(device)  # [B, H, N]
-        m = m.to(device)  # [B, H, N]
+    mae3s, rmse3s, mae6s, rmse6s = [], [], [], []
 
-        pred = model(x)   # [B, H, N]
+    for batch in loader:
+        if forward_fn is None:
+            # only-scada baseline: batch=(x,y,m)
+            x, y, m = batch
+            x, y, m = x.to(device), y.to(device), m.to(device)
+            pred = model(x)  # (B,H,N)
+        else:
+            # 复杂模型：让你自己提供 forward_fn(batch)->pred,y,m
+            pred, y, m = forward_fn(batch, device)
 
-        mae = masked_mae(pred, y, m).item()
-        rmse = torch.sqrt(
-            (m * (pred - y) ** 2).sum() / (m.sum() + 1e-6)
-        ).item()
-        maes.append(mae)
-        rmses.append(rmse)
+        # <3h: 前3步
+        mae3s.append(masked_mae(pred[:, :3], y[:, :3], m[:, :3]).item())
+        rmse3s.append(masked_rmse(pred[:, :3], y[:, :3], m[:, :3]).item())
 
-    return float(np.mean(maes)), float(np.mean(rmses))
+        # <6h: 全部6步
+        mae6s.append(masked_mae(pred, y, m).item())
+        rmse6s.append(masked_rmse(pred, y, m).item())
+
+    return (
+        float(np.mean(mae3s)), float(np.mean(rmse3s)),
+        float(np.mean(mae6s)), float(np.mean(rmse6s)),
+    )
 
 
 def main():
@@ -54,7 +68,7 @@ def main():
     print("Using device:", device)
 
     # ===== 读取 meta.json =====
-    meta_path = "data/wind/meta.json"
+    meta_path = "data/wind_onlyscada_no_5b/meta.json"
     with open(meta_path, "r") as f:
         meta = json.load(f)
 
@@ -75,13 +89,19 @@ def main():
     print("L =", L, "H =", H)
 
     # ===== 数据集 & DataLoader =====
-    train_ds = WindSTFDataset(split="train", L=L, H=H)
-    val_ds   = WindSTFDataset(split="val",   L=L, H=H)
-    test_ds  = WindSTFDataset(split="test",  L=L, H=H)
+    train_ds = WindSTFDatasetOnlyScada5B(split="train", L=L, H=H)
+    val_ds   = WindSTFDatasetOnlyScada5B(split="val",   L=L, H=H)
+    test_ds  = WindSTFDatasetOnlyScada5B(split="test",  L=L, H=H)
 
     train_ld = DataLoader(train_ds, batch_size=64, shuffle=True,  drop_last=True)
     val_ld   = DataLoader(val_ds,   batch_size=128, shuffle=False)
     test_ld  = DataLoader(test_ds,  batch_size=128, shuffle=False)
+
+    print("len(train)=", len(train_ds), "len(val)=", len(val_ds), "len(test)=", len(test_ds))
+    x0,y0,m0 = next(iter(val_ld))
+    print("val batch shapes:", x0.shape, y0.shape, m0.shape)
+    print("val mask ratio:", (m0.sum()/m0.numel()).item())
+    print("val y mean/std:", y0[m0>0.5].mean().item(), y0[m0>0.5].std().item())
 
     # ===== 构建 LSTM（仅用 SCADA 特征） =====
     model = LSTM_STF_v001(

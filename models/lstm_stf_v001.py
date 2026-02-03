@@ -31,7 +31,7 @@ class LSTM_STF_v001(nn.Module):
 
         # LSTM 只吃 SCADA 特征：input_size = scada_dim
         self.lstm = nn.LSTM(
-            input_size=scada_dim,
+            input_size=full_input_dim,
             hidden_size=hidden_dim,
             num_layers=num_layers,
             batch_first=True,
@@ -57,10 +57,15 @@ class LSTM_STF_v001(nn.Module):
         # 只取前 scada_dim 个特征：SCADA 部分
         # 对应你的 feature_names 开头 7 项:
         # ["P", "dP", "W", "dir_sin", "dir_cos", "nac_sin", "nac_cos"]
-        x_scada = x[..., : self.scada_dim]     # [B, L, N, scada_dim]
+        #x_scada = x[..., : self.scada_dim]     # [B, L, N, scada_dim]
 
         # (B, L, N, scada_dim) -> (B*N, L, scada_dim)
-        x_reshaped = x_scada.view(B * N, L, self.scada_dim)
+        #x_reshaped = x_scada.view(B * N, L, self.scada_dim)
+        x_scada = x[:]                      # [B, L, N, 7]
+        x_bnlf  = x_scada.permute(0, 2, 1, 3).contiguous()      # [B, N, L, 7]
+        x_reshaped = x_bnlf.view(B * N, L, self.full_input_dim)      # [B*N, L, 7]
+
+
 
         # LSTM 时间建模
         out, (h_n, c_n) = self.lstm(x_reshaped)   # out: [B*N, L, hidden_dim]

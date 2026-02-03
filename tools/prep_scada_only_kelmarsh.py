@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 
 RAW_DIR = "raw_scada"
-OUT_DIR = "data/wind"
+OUT_DIR = "data/wind_onlyscada"
 os.makedirs(OUT_DIR, exist_ok=True)
 
 TIME_COL = "# Date and time"

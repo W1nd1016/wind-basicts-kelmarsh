@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 # 让代码可以找到 datasets / models
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from datasets.wind_dataset import WindSTFDataset
+from datasets.wind_dataset_scada_cerra_yearsplit import WindSTFDatasetScadaCerraYearSplit
 from models.agcrn_bt import AGCRN
 from models.mtgnn_v058 import MTGNN_v058
 
@@ -62,7 +62,7 @@ def main():
     print("Using device:", device)
 
     # ======= 读取 meta.json，拿到基本信息和反归一化参数 =======
-    meta_path = "data/wind/meta.json"
+    meta_path = "data/wind_scada_cerra_4y_resample/meta.json"
     with open(meta_path, "r") as f:
         meta = json.load(f)
 
@@ -91,12 +91,12 @@ def main():
     print("Index of 'P' in feature_names:", p_idx)
 
     # ======= 读取邻接矩阵，用于构建 MTGNN =======
-    adj = np.load("data/wind/adj.npy").astype(np.float32)
+    adj = np.load("data/wind_scada_cerra_4y_resample/adj.npy").astype(np.float32)
     adj_tensor = torch.tensor(adj, dtype=torch.float32, device=device)
     print("Loaded adj.npy, shape:", adj.shape)
 
     # ======= 构建数据集，只用 test split =======
-    test_ds = WindSTFDataset(split="test", L=L, H=H)
+    test_ds = WindSTFDatasetScadaCerraYearSplit(split="test", L=L, H=H)
     print("len(test_ds) =", len(test_ds))
     assert 0 <= SAMPLE_IDX < len(test_ds), "SAMPLE_IDX 越界了，请改小一点"
 

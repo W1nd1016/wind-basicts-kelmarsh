@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from datasets.wind_dataset import WindSTFDataset
+from datasets.wind_dataset2 import WindSTFDataset2
 from models.agcrn_bt import AGCRN
 
 def masked_mae(pred, y, m):
@@ -28,13 +28,13 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Using device:", device)
 
-    meta = json.load(open("data/wind/meta.json"))
+    meta = json.load(open("data/wind2/meta.json"))
     input_dim = len(meta["feature_names"])
     print("input_dim =", input_dim)
 
-    train_ds = WindSTFDataset(split="train")
-    val_ds   = WindSTFDataset(split="val")
-    test_ds  = WindSTFDataset(split="test")
+    train_ds = WindSTFDataset2(split="train")
+    val_ds   = WindSTFDataset2(split="val")
+    test_ds  = WindSTFDataset2(split="test")
 
     train_ld = DataLoader(train_ds, batch_size=64, shuffle=True, drop_last=True)
     val_ld   = DataLoader(val_ds, batch_size=64, shuffle=False)

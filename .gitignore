@@ -1,8 +1,24 @@
 # 原始大数据（不要上传）
 raw_scada/
+raw_scada_dataset2/
+raw_cerra/
+raw_new_cerra/
+raw_new_cerra1hour/
+raw_new_cerra1hour_dataset2/
 
 # 训练输出
 output/
+data/wind2/
+data/wind4_1hour/
+data/wind_onlyscada/
+data/wind_onlyscada_no_5b/
+data/wind_onlyscada_no_5b_dataset2/
+data/wind_scada_cerra_4y_resample/
+data/wind_scada_cerra_5y/
+data/wind_scada_cerra_fnp_v2/
+data/wind_scada_cerra_v1_s2/
+data/wind_scada_cerra_v1_s2_FnpOnlyAnalysis/
+data/wind_scada_cerra_v1_s2_FnpOnlyAnalysis_dataset2/
 
 # data/wind/X.npy
 # data/wind/Y.npy

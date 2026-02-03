@@ -10,7 +10,7 @@ import torch
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 
-from datasets.wind_dataset import WindSTFDataset
+from datasets.wind_dataset_scada_cerra_yearsplit import WindSTFDatasetScadaCerraYearSplit
 from models.agcrn_bt import AGCRN
 from models.mtgnn_v058 import MTGNN_v058
 
