@@ -466,7 +466,7 @@ class FNPFusionOnlyAnalysis_NoRot_Paper1PlusV2(nn.Module):
         z_obs_s = self.obs_scalar_enc(x_obs_scalar, coords)  # (B,L,N,D)
 
         # obs_vec: [u,v,nac_sin,nac_cos,cos_mis,sin_mis]
-        x_obs_vec = torch.stack([u_sc, v_sc,nac_sin,nac_cos, cos_mis, sin_mis], dim=-1)
+        x_obs_vec = torch.stack([u_sc, v_sc, nac_sin,nac_cos, cos_mis, sin_mis], dim=-1)
         z_obs_v = self.obs_vec_enc(x_obs_vec, coords)  # (B,L,N,D)
 
         # (A) wake mixing
@@ -575,7 +575,7 @@ class FNPFusionOnlyAnalysis_NoRot_Paper1PlusV2(nn.Module):
         z_vec = self.tri_vec(z_obs=z_obs_v, z_bg=z_bg_v, z_fc=z_fc_v)  # (B,L,N,D)
 
         gamma, beta = self.vec_film(z_vec)
-        s = torch.sigmoid(self.film_scale)
+        s = torch.sigmoid(self.film_scale)  
         z = (1.0 + s * gamma) * z_scalar + (s * beta)
         z = self.out_norm(z)
         z = _nan_to_num(z, nan=0.0, posinf=0.0, neginf=0.0)

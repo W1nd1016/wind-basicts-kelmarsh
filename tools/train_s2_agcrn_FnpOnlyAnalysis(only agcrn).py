@@ -62,7 +62,7 @@ def main():
     print("Using device:", device)
 
     # change root as needed
-    root = "data/wind_scada_cerra_v1_s2_FnpOnlyAnalysis_dataset2"
+    root = "data/wind_scada_cerra_v1_s2_FnpOnlyAnalysis_dataset3"
     meta = json.load(open(f"{root}/meta.json"))
 
     N = len(meta["turbine_ids"])

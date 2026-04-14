@@ -1,0 +1,46 @@
+\section{Appendices}
+\subsection{dataset construction}
+Concretely, we align SCADA to hourly timestamps and sub-sample it every 3 hours to form the SCADA history features (power $P_3$, power increment $\Delta P_3$, wind speed $W_3$, and direction/yaw sine-cosine).
+For CERRA, we use two types of gridded inputs around each turbine:
+\begin{itemize}
+  \item \textbf{CERRA analysis (history, 3-hour step).} For all the $N{=}6/14/21$ turbines, we select the $K{=}16/20/21$ nearest grid points and use four variables per grid point (speed, direction, $u$, $v$). These are aligned to the 3-hour input timeline.
+  \item \textbf{CERRA forecast (issued at $t_0$).} At each 3-hour anchor time, we take the forecasts for lead times 1--6 hours ahead, again for the same N neighboring grid points and the same four variables.
+\end{itemize}
+
+\paragraph{\textbf{Neighbor grid geometry.}}
+For each turbine, we store the relative position of each neighboring grid point as $(\Delta x, \Delta y, d)$, where $\Delta x$/$\Delta y$ are the horizontal offsets and $d$ is the Euclidean distance.
+These geometric features are normalized (per turbine) and are used by the grid encoder to model local spatial context around each turbine.
+
+\paragraph{\textbf{Train/val/test split (no temporal leakage).}}
+We split chronologically by years: train on 2016--2018, validate on 2019, and test on 2020.
+To prevent leakage across splits under multi-step forecasting, a sample is assigned to a split only if its \emph{last} forecasting hour lies within the corresponding year range.
+
+\paragraph{\textbf{Normalization.}}
+We apply z-score normalization using statistics computed on the training split only, over valid entries.
+Invalid entries are set to zero after normalization.
+CERRA forecast tensors are normalized separately using per-(lead, grid, variable) statistics, again computed on the training split.
+All normalization parameters are stored in \texttt{meta.json} for reproducibility.
+
+
+\paragraph{\textbf{Our official implementation.}}
+Our final model follows Fig.~\ref{fig:framework} and consists of (i) a non-parametric \emph{geometric encoder} $\mu$, (ii) a \emph{frequency-domain fusion} module with Neural Fourier Operator layers, and (iii) a lightweight \emph{MLP decoder}.
+Specifically, $\mu$ deterministically converts directional information into geometry-aware features (wind--turbine alignment and global wind structure), which are concatenated with the original scalar inputs.
+Two modality-specific MLPs $\sigma(\cdot)$ then project the enriched SCADA and CERRA inputs into a shared latent space, producing initial embeddings
+$\bm{h}_{s}^{(0)} \in \mathbb{R}^{16\times N\times 8}$ and
+$\bm{h}_{g}^{(0)} \in \mathbb{R}^{16\times K\times 8}$, where the latent temporal and feature dimensions are set to $d_{\text{time}}{=}16$ and $d_{\text{hidden}}{=}8$, respectively.
+We stack $L{=}2$ frequency-fusion layers $\{\gamma_\theta^{(l)}\}_{l=1}^{2}$.
+Each layer applies an FFT along the time axis, performs learnable spectral mixing, and maps the enhanced spectrum back via IFFT; the two modalities are then concatenated along the spatial dimension and linearly projected to obtain
+$\bm{H}^{(l+1)} \in \mathbb{R}^{16\times (N+K)\times 8}$ (Eq.~\eqref{eqn:fuse}).
+Finally, we flatten $\bm{H}^{(2)}$ and use a two-layer MLP with ReLU to predict the $T$-step turbine power outputs (Eq.~\eqref{eq:decoder_output}).
+
+\paragraph{\textbf{Optimization and training protocol.}}
+We optimize the model using the masked supervision described in the dataset construction (invalid targets are ignored by the loss and evaluation).
+Following Eq.~(9), we minimize the masked mean squared error, i.e., the squared Frobenius norm between predictions and ground truth averaged over valid turbine--time targets.
+Unless otherwise stated, we use AdamW with learning rate $1\times 10^{-4}$ and weight decay $1\times 10^{-4}$, batch size $128$, dropout $0.15$, and train for up to $100$ epochs with early stopping patience $20$ (\cref{tab:exp-setting-training}).
+We do not use gradient clipping or learning-rate scheduling.
+All reported results are evaluated on the test set using normalized MAE and RMSE.
+\paragraph{\textbf{Code availability.}}
+The core implementation of our method, including the FNP-Light and FNP-Latest models along with data loaders and training scripts, is publicly available at:
+\url{https://github.com/W1nd1016/wind-basicts-kelmarsh.git}.
+\paragraph{Hardware and software.}
+All experiments are conducted using PyTorch [1.12] on RTX 4090, with CUDA [12.4]. 

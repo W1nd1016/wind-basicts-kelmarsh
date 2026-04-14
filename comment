@@ -1,0 +1,225 @@
+KDD Rebuttal Note
+Reviewer bE7f
+
+We sincerely thank the reviewer for the careful reading and constructive feedback. We have addressed each point carefully in the following.
+
+W1 & Q1 — Incomplete priors
+
+We appreciate this helpful suggestion. To further examine the completeness of the priors, we augment the original physics set with three additional variables, namely turbulence intensity, a simple wake tendency, and a spatial NWP speed anomaly. We can employ c-STG [1] for automatic feature selection while keeping the backbone unchanged. In brief, c-STG learns input-conditioned stochastic gates for each feature channel, so that informative variables receive larger gate mass and less useful ones are suppressed during training. As shown in Table 1, the learned gates place more weight on the original geometry cues, especially physical alignment, vorticity, and divergence, and the no-gate ablations show that removing these original variables causes larger degradation than removing the three added variables, whose effects are more marginal.
+
+Table 1. Mean gate mass by expert and no-gate ablation at 6 h MAE.
+
+Group	Elem.	Mass	w/o elem (vs. 0.316)
+Original	physical alignment	0.281	0.320 (+0.004)
+Original	global-wind vorticity	0.224	0.323 (+0.007)
+Original	global-wind divergence	0.169	0.322 (+0.006)
+New	wake tendency	0.141	0.317 (+0.001)
+New	spatial NWP speed anomaly	0.132	0.315 (-0.001)
+New	turbulence intensity	0.053	0.314 (-0.002)
+W3 & Q2 — Robustness analysis with noisy / mismatched priors
+
+We are grateful for this suggestion. We test the submitted model by adding Gaussian noise to geometry features at test time. SCADA, NWP, and targets are unchanged, so this isolates sensitivity to imperfect priors rather than corruption of the raw inputs. We use σ ∈ {0.01, 0.05, 0.10, 0.30, 0.50} and report 6 h MAE plus relative degradation over 5 random seeds.
+
+Table 2. Noise on standardized geometry at 6 h MAE.
+
+Condition	6 h MAE	Deg. (%)
+Clean	0.316 ± 0.016	0.00
+σ = 0.01	0.316 ± 0.016	0.00
+σ = 0.05	0.316 ± 0.016	0.10
+σ = 0.10	0.316 ± 0.016	0.30
+σ = 0.30	0.319 ± 0.017	1.00
+σ = 0.50	0.322 ± 0.018	1.91
+The degradation remains small even at strong perturbation, suggesting that the our model is robust to noisy or partially mismatched priors.
+
+Q3 — Additional generalization results
+
+We appreciate the reviewer's suggestion to broaden the evidence base. To broaden the evidence beyond the UK, we add SMARTEOLE (France, 2020) [2] and Nørre M2 (Denmark; source documentation in [3]) as supplementary experiments.
+For fairness, the baselines use the shared SCADA+CERRA encoder of Xu et al. [4], whereas Ours keeps the submitted geoencoder and modality fusion pipeline under matched splits and training budget. As shown in Table 3, Ours remains competitive and retains an overall advantage across the two extra sites.
+
+Table 3. Cross-site MAE comparison.
+
+Model	S <3h MAE	S <6h MAE	N <3h MAE	N <6h MAE
+iTransformer	0.226	0.257	0.271	0.343
+DLinear	0.330	0.329	0.419	0.426
+MTGNN	0.207	0.237	0.275	0.353
+HimNet	0.276	0.286	0.269	0.340
+Ours	0.204	0.229	0.257	0.317
+References
+
+[1] Contextual feature selection with conditional stochastic gates, 2024.
+[2] LES dataset of SMARTEOLE, Zenodo, 2026.
+[3] SCADA data from Norre_m2 wind farm, 2022.
+[4] A cross-dataset benchmark for neural network-based wind power forecasting, 2025.
+
+Reviewer dnsd
+
+We sincerely thank the reviewer for the thoughtful and technically careful comments. We have addressed each point carefully in the following.
+
+W1 & Q3 — FNO vs our block
+
+We appreciate the reviewer raising this point and clarify why our method is an instantiation of the FNO framework.
+
+The original FNO layer [1] consists of three components: a learnable spectral convolution (forward FFT → multiply by learnable complex weights → inverse FFT), a local linear bypass, and a pointwise nonlinearity. Our frequency fusion module implements exactly these three components. The key distinction between FNO and plain FFT-based processing is the presence of learnable spectral weights that parameterize a global kernel in the frequency domain. Our module uses a learnable weight matrix to mix real and imaginary parts of the spectrum, which is the FNO's learnable spectral convolution, not a fixed or heuristic filter.
+The original FNO applies spectral convolution along spatial axes because it learns spatial PDE operators. In our problem, the target mapping is from temporal input functions to temporal output functions, so applying the Fourier convolution along the time axis is the principled choice.
+We will revise the manuscript to make this structural correspondence more explicit.
+
+W2 & Q1 — Fair multimodal baselines
+
+We are grateful for this suggestion and therefore organize the additional evidence into two controlled parts. Table 1 keeps the inputs fixed and compares representative fusion variants, so that the effect of fusion design can be examined directly. Metrics are normalized test MAE (mean ± std) over Kelmarsh, Penmanshiel, and Hill of Towie. Under this controlled setting, our fusion remains the strongest overall, suggesting that the gain is not simply due to using richer inputs.
+
+Table 1. Fusion variants with fixed inputs (MAE).
+
+Fusion	3 h MAE	6 h MAE
+Concat (early)	0.330 ± 0.016	0.332 ± 0.015
+Concat (late)	0.331 ± 0.019	0.335 ± 0.018
+Pool-inject	0.320 ± 0.018	0.324 ± 0.016
+Gate	0.318 ± 0.021	0.326 ± 0.018
+FiLM	0.312 ± 0.019	0.322 ± 0.019
+Bilinear	0.312 ± 0.019	0.321 ± 0.017
+Cross-attn	0.311 ± 0.020	0.323 ± 0.018
+Ours	0.304 ± 0.017	0.316 ± 0.016
+Table 2 then compares the submitted model against strong representative time-series and spatio-temporal baselines under the same SCADA+CERRA inputs following Xu et al. [2]. Under this fair comparison, our method remains competitive and achieves the best overall accuracy.
+
+Table 2. Representative TS/ST backbones (MAE).
+
+Model	<3h MAE	<6h MAE
+iTransformer	0.312 ± 0.011	0.338 ± 0.015
+DLinear	0.381 ± 0.003	0.421 ± 0.004
+MTGNN	0.343 ± 0.015	0.388 ± 0.013
+HimNet	0.330 ± 0.009	0.376 ± 0.010
+Ours	0.304 ± 0.017	0.316 ± 0.016
+Q2 — Feature claims and ablations
+
+We appreciate this observation and clarify the practical meaning of these feature gains as follows.
+
+Marginal does not mean negligible. While the degradation from removing physical alignment is smaller than that from removing CERRA or NFL, it is consistently positive across all three farms, both horizons, and both metrics—12 out of 12 settings show improvement when alignment is included. This consistency across diverse farm configurations (6, 14, and 21 turbines) is strong evidence that the component captures a genuine physical signal rather than fitting noise.
+Small gains compound in practice. In operational wind power forecasting, even a fraction of a percentage point in MAE translates to meaningful economic value in dispatch and reserve scheduling over thousands of hours. The alignment component achieves this gain at zero learnable parameter cost, as it is a non-parametric deterministic transformation.
+References
+
+[1] Fourier Neural Operator for Parametric Partial Differential Equations, 2021.
+[2] A cross-dataset benchmark for neural network-based wind power forecasting, 2025.
+
+Reviewer py3A
+
+We thank the reviewer for the constructive feedback. We have addressed each point carefully in the following.
+
+W1 & Q1 — Methodological novelty
+
+Thanks for the comment. We would like to clarify our technical contributions as follows:
+
+Our key insight is identifying why existing methods fail at wind power forecasting with NWP: data heterogeneity between point-based SCADA and grid-based NWP, and the directional physical interactions governing power conversion. Designing a framework that systematically addresses both challenges through geometric encoding and spectral fusion is itself a non-trivial contribution.
+The geometric encoder deliberately avoids learned parameters because the underlying physics (cosine yaw-misalignment law, divergence, vorticity) is known and exact. We use domain knowledge directly, as a design choice, which is consistent with the broader trend toward physics-informed ML, where injecting known structure improves generalization.
+Table 3 shows that simply giving existing models access to the same SCADA+NWP inputs via standard fusion yields weaker results than our framework. This demonstrates that our specific integration of geometric priors with Fourier-domain fusion is not an obvious assembly.
+W2 & Q2 — Industrial metrics
+
+We are grateful for this suggestion. Table 1 shows that a 0.01 change in normalized MAE corresponds to about 5.8-7.2 kW on these farms. With hourly forecasts, a 1 kW reduction means about 1 kWh less deviation per step. Such gains matter operationally because over-prediction can require dispatch correction or reserves, while under-prediction can induce conservative scheduling, curtailment, or extra storage cost. We therefore view the gains in Table 1 as practically meaningful.
+
+Table 1. nMAE in kW.
+
+Farm	<3h nMAE	kW	<6h nMAE	kW	+0.01 nMAE
+K	0.296	173.3	0.309	180.8	~5.8
+P	0.285	190.8	0.298	200.1	~6.7
+H	0.329	237.4	0.339	245.1	~7.2
+W3 & Q3 — Generalization and horizon
+
+We appreciate the reviewer's suggestion. We additionally add SMARTEOLE (France) [1] and Norre M2 (Denmark) [2] as supplementary cross-site evidence. For fairness, the baselines follow Xu et al. [3] with a shared SCADA+CERRA encoder.
+
+Table 2. Cross-site MAE results.
+
+Model	S<3h MAE	S<6h MAE	N<3h MAE	N<6h MAE
+iTransformer	0.226	0.257	0.271	0.343
+DLinear	0.330	0.329	0.419	0.426
+MTGNN	0.207	0.237	0.275	0.353
+HimNet	0.276	0.286	0.269	0.340
+Ours	0.204	0.229	0.257	0.317
+We do not extend beyond 6 h because weather forecasts are hourly only within the first 6 h and 3-hourly afterward. We will note this temporal misalignment in the limitations and leave longer-horizon extension to future work.
+
+W4 & Q4 — FNO and decoder design
+
+We appreciate this concern. Our motivation for using the Fourier block is that SCADA and CERRA carry heterogeneous spatio-temporal patterns: SCADA reflects turbine-level fast local fluctuations, whereas CERRA captures smoother and larger-scale meteorological trends. We therefore hypothesize that learning their interaction in the frequency domain is more effective than relying only on direct time-domain mixing, because frequency-domain mixing can separate and recombine components at different temporal scales after modality alignment. In contrast, purely time-domain fusion may entangle these mismatched fluctuation trends and lead to negative transfer. In this sense, the NFL block is used here as an efficient mixer for heterogeneous multi-scale signals rather than as a claim that wind power forecasting is a strict PDE-operator learning task.
+
+For the decoder part, we additionally compare the submitted MLP readout with stronger sequence decoders while keeping the rest of the pipeline unchanged.
+
+Table 3. Decoder variants over datasets (MAE).
+
+Dec.	#Params	<3h MAE	<6h MAE
+MLP	0.12M	0.304 ± 0.017	0.316 ± 0.016
+LSTM	0.25M	0.302 ± 0.019	0.314 ± 0.017
+iTransformer	0.32M	0.301 ± 0.017	0.313 ± 0.016
+The results show that stronger decoders bring marginal gains, suggesting that the main performance comes from the upstream representation and modality integration rather than from using a recurrent or attention-heavy decoder.
+
+Q5 — Additional concern towards the experiment results
+
+We welcome this suggestion. To isolate model design from possible input advantage, Table 4 compares representative fusion variants under matched SCADA+CERRA inputs. Under this controlled setting, our fusion remains the strongest overall, supporting the claim that the gain is not explained solely by access to richer inputs.
+
+Table 4. Fusion variants over datasets (MAE).
+
+Fusion	3 h MAE	6 h MAE
+Concat (early)	0.330 ± 0.016	0.332 ± 0.015
+Concat (late)	0.331 ± 0.019	0.335 ± 0.018
+Pool-inject	0.320 ± 0.018	0.324 ± 0.016
+Gate	0.318 ± 0.021	0.326 ± 0.018
+FiLM	0.312 ± 0.019	0.322 ± 0.019
+Bilinear	0.312 ± 0.019	0.321 ± 0.017
+Cross-attn	0.311 ± 0.020	0.323 ± 0.018
+Ours	0.304 ± 0.017	0.316 ± 0.016
+References
+
+[1] LES dataset of SMARTEOLE, Zenodo, 2026.
+[2] SCADA data from Norre_m2 wind farm, 2022.
+[3] A cross-dataset benchmark for neural network-based wind power forecasting, 2025.
+
+Reviewer xyFY
+
+We thank the reviewer for the careful reading and constructive suggestions. We have addressed each point carefully in the following.
+
+W1 & Q1 — Contribution of the proposed architecture
+
+We appreciate this suggestion and address it with targeted controls.
+
+In the main article, Table 1 compares against SCADA-only baselines, while Table 2 evaluates baselines that receive exactly the same SCADA+NWP inputs as our model through a shared embedding scheme. Table 3 further compares against NWP-only baselines. These three tables together allow us to disentangle the contribution of additional data from architectural design.
+In Table 2, all models consume identical SCADA+CERRA inputs via the same embedding pipeline. The only difference is the downstream architecture. Our method still achieves 15–29% lower errors than the strongest fusion baseline, demonstrating that the gains are predominantly architectural.
+W2 & Q2 — Additional datasets and regions
+
+We are grateful for this suggestion. We add SMARTEOLE (France, 2020) [1] and Norre M2 (Denmark, 1991-1993) [2]. For fairness, the baselines follow Xu et al. [3] with the shared SCADA+CERRA encoder, whereas Ours keeps the submitted geoencoder and fusion pipeline under matched splits and training budget.
+
+Table 1. Cross-site MAE comparison.
+
+Model	S<3h MAE	S<6h MAE	N<3h MAE	N<6h MAE
+iTransformer	0.226	0.257	0.271	0.343
+DLinear	0.330	0.329	0.419	0.426
+MTGNN	0.207	0.237	0.275	0.353
+HimNet	0.276	0.286	0.269	0.340
+Ours	0.204	0.229	0.257	0.317
+These results broaden the evidence beyond the UK and keep Ours competitive on both extra sites.
+
+W3 & Q3 — Fine-grained ablation
+
+Following the reviewer's recommendation, we split this point into two targeted controls that directly match the requested comparisons: geometry vs simpler directional encoding, and FNL vs standard temporal mixers.
+
+Table 2. Geo encoder vs simpler directional encoding at 6h MAE.
+
+Setting	Geometry input	6 h MAE
+Full geo encoder	full geometry features	0.316
+Simple SCADA directional encoding	w/o wind-turbine alignment	0.320 (+0.004)
+Simple CERRA directional encoding	w/o divergence and vorticity	0.331 (+0.015)
+From the results, using simple SCADA or CERRA directional ecncoding term reduces the encoder to a simpler direction-only variant and leads to worse accuracy, suggesting that the gain does not come from a naive directional cue alone.
+
+Table 3. FNL vs simpler mixing baselines with fixed inputs (MAE).
+
+Mixer	<3h MAE	<6h MAE
+Conv	0.330 ± 0.016	0.332 ± 0.015
+Cross-attn	0.311 ± 0.020	0.323 ± 0.018
+ours	0.304 ± 0.017	0.316 ± 0.016
+From the results, using the fair-fusion controls with the same SCADA+CERRA inputs, FNL remains better than both a simpler pool-inject mixing baseline and a direct attention baseline.
+
+W4 & Q4 — Additional analysis
+
+We value this constructive suggestion. In the revision, we will include representative forecasting cases under distinct operational scenarios, such as steady high-wind periods, to illustrate how the geometric features (yaw misalignment, divergence, vorticity) activate differently and contribute to prediction accuracy in each regime.
+
+References
+
+[1] LES dataset of SMARTEOLE, Zenodo, 2026.
+[2] SCADA data from Norre_m2 wind farm, 2022.
+[3] A cross-dataset benchmark for neural network-based wind power forecasting, 2025.
+選擇 Repo

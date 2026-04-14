@@ -50,7 +50,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Using device:", device)
 
-    meta = json.load(open("data/wind_onlyscada_no_5b_dataset2/meta.json"))
+    meta = json.load(open("data/wind_onlyscada_no_5b_dataset3/meta.json"))
     input_dim = len(meta["feature_names"])
     print("input_dim =", input_dim)
 

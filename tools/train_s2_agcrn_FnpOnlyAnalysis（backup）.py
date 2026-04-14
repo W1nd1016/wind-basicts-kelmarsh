@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from datasets.wind_dataset_scada_cerra_s2_FnpOnlyAnalysis import WindDatasetScadaCerraS2
-from models.fnp_fusion_OnlyAnalysis import FNPFusion
+from models.fnp_fusion_OnlyAnalysis_noRot_paper1_plus_v2_wake_downwind import FNPFusionOnlyAnalysis_NoRot_Paper1PlusV2
 from models.agcrn_s2_wrapper_FnpOnlyAnalysis import S2Model
 from models.agcrn_seq2seq_baseline2_FapOnlyAnalysis import AGCRNSeq2SeqBaseline
 
@@ -67,7 +67,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Using device:", device)
 
-    root = "data/wind_scada_cerra_v1_s2_FnpOnlyAnalysis"
+    root = "data/wind_scada_cerra_v1_s2_FnpOnlyAnalysis_dataset2"
     meta = json.load(open(f"{root}/meta.json"))
 
     N = len(meta["turbine_ids"])
@@ -96,7 +96,7 @@ def main():
     fc_emb_vec = 32
     exog_dim = fc_emb_scalar + fc_emb_vec
 
-    fnp = FNPFusion(
+    fnp = FNPFusionOnlyAnalysis_NoRot_Paper1PlusV2(
         d_model=d_model,
         modes=8,
         K_bg=K,
